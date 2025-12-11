@@ -124,17 +124,24 @@ aws eks update-kubeconfig --region us-west-2 --name demo-eks-cluster
 # Return to project root
 cd ..
 
-# Make scripts executable
-chmod +x scripts/*.sh
+# Scripts are already executable (chmod +x applied)
 
 # Deploy MongoDB and demo app
 ./scripts/deploy.sh
 
 # This script will:
+# - Validate prerequisites
 # - Create namespace
 # - Deploy MongoDB via Helm
-# - Build and deploy demo app
-# - Display access instructions
+# - Build Docker image
+# - Deploy demo app
+# - Verify deployment
+# - Display access instructions (credentials stored securely)
+```
+
+**Note:** MongoDB credentials are stored in Kubernetes secrets and not displayed in output. Retrieve them if needed:
+```bash
+kubectl get secret mongodb -n demo -o jsonpath='{.data.mongodb-passwords}' | base64 -d
 ```
 
 ### 3. Test the Deployment
@@ -165,11 +172,6 @@ curl http://localhost:8080/orders/count
 │   └── backend.tf.example    # Remote state configuration
 │
 ├── helm/                      # Helm charts
-│   ├── mongodb/              # MongoDB configuration
-│   │   ├── values.dev.yaml   # Development values
-│   │   ├── values.ci.yaml    # CI/Test values
-│   │   └── README.md         # MongoDB deployment guide
-│   │
 │   └── demo-app/             # Custom application chart
 │       ├── Chart.yaml        # Chart metadata
 │       ├── values.yaml       # Default values
@@ -192,10 +194,17 @@ curl http://localhost:8080/orders/count
 │   ├── Dockerfile            # Container image
 │   └── README.md             # App documentation
 │
+├── mongodb/                   # MongoDB configuration
+│   ├── values.dev.yaml       # Development values
+│   ├── values.ci.yaml        # CI/Test values
+│   ├── values.prod.yaml      # Production values
+│   └── README.md             # MongoDB deployment guide
+│
 ├── scripts/                   # Automation scripts
 │   ├── deploy.sh             # Deployment automation
-│   ├── test-app.sh           # Integration tests
-│   └── cleanup.sh            # Resource cleanup
+│   ├── test-app.sh           # Integration tests ⭐ REQUIRED
+│   ├── cleanup.sh            # Resource cleanup
+│   └── README.md             # Scripts documentation
 │
 └── README.md                  # This file
 ```
@@ -294,9 +303,9 @@ The custom Helm chart includes:
 
 ## 🧪 Testing
 
-### Automated Integration Tests
+### Automated Integration Tests ⭐ ASSESSMENT REQUIREMENT
 
-The `test-app.sh` script performs comprehensive validation:
+The `test-app.sh` script fulfills the assessment requirement: *"Provide a test that can be repeated to demonstrate that the application reads and inserts Mongo data."*
 
 ```bash
 ./scripts/test-app.sh
@@ -307,11 +316,13 @@ The `test-app.sh` script performs comprehensive validation:
 - ✅ MongoDB pod health
 - ✅ Demo app pod readiness
 - ✅ Health endpoint (200 OK)
-- ✅ Order creation (POST /orders)
-- ✅ Order counting (GET /orders/count)
-- ✅ Order retrieval (GET /orders)
+- ✅ Order creation (POST /orders) - **MongoDB WRITE**
+- ✅ Order counting (GET /orders/count) - **MongoDB READ**
+- ✅ Order retrieval (GET /orders) - **MongoDB READ**
 - ✅ Error handling (400 for invalid requests)
 - ✅ Structured logging verification
+
+**Output:** The script provides detailed pass/fail status for each test and shows a summary at the end.
 
 ### Manual Testing
 
@@ -353,11 +364,12 @@ kubectl logs -n demo -l app.kubernetes.io/name=demo-app -f
 ### What's Included
 
 1. **Security**
-   - Non-root containers
-   - Security contexts
-   - Secret management for credentials
+   - Non-root containers (runAsUser: 1001)
+   - Security contexts with dropped capabilities
+   - Secure secret management (no passwords in logs)
    - Network policies (configurable)
    - Read-only root filesystem option
+   - No privilege escalation allowed
 
 2. **Reliability**
    - Multiple replicas
@@ -426,6 +438,9 @@ kubectl logs <pod-name> -n demo
 # Verify MongoDB is running
 kubectl get pods -n demo -l app.kubernetes.io/name=mongodb
 
+# Get MongoDB password
+export MONGODB_PASSWORD=$(kubectl get secret mongodb -n demo -o jsonpath='{.data.mongodb-passwords}' | base64 -d)
+
 # Test MongoDB connection
 kubectl run mongodb-client --rm -it --restart='Never' \
   --namespace demo \
@@ -433,7 +448,7 @@ kubectl run mongodb-client --rm -it --restart='Never' \
   --command -- bash
 
 # Inside the pod:
-mongosh mongodb://mongodb:27017 -u root -p <password>
+mongosh mongodb://mongodb:27017 -u appuser -p $MONGODB_PASSWORD
 ```
 
 ### EKS cluster issues
@@ -488,20 +503,7 @@ terraform destroy -auto-approve
 4. **Structured logging**: Single-line JSON for easy parsing by log aggregators
 5. **Multiple values files**: Environment-specific configs without code duplication
 
-## 🤝 Contributing
 
-This is a demonstration project. For improvements:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## 📄 License
-
-MIT License - Feel free to use this as a reference for your own projects.
-
----
-
-**Author**: DevOps Team  
+**Author**: Nagaraj Badiger 
 **Date**: December 2025  
 **Version**: 1.0.0
