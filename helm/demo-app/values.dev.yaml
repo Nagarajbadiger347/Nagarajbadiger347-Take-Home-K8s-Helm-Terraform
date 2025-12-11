@@ -1,0 +1,68 @@
+# Dev environment
+replicaCount: 1
+
+image:
+  repository: demo-app
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+autoscaling:
+  enabled: false
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 20
+
+mongodb:
+  host: mongodb
+  port: 27017
+  database: app
+  collection: orders
+  auth:
+    existingSecret: mongodb
+
+configMap:
+  data:
+    MONGO_DB: app
+    MONGO_COLLECTION: orders
+    LOG_LEVEL: "debug"
+    NODE_ENV: "development"
+
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false

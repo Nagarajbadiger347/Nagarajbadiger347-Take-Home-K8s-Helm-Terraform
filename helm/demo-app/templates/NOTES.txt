@@ -1,0 +1,43 @@
+Demo App deployed successfully!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+{{- if .Values.autoscaling.enabled }}
+Replicas: {{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} (HPA enabled)
+{{- else }}
+Replicas: {{ .Values.replicaCount }}
+{{- end }}
+
+Access the app:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "demo-app.fullname" . }} 8080:{{ .Values.service.port }}
+  
+  Then visit: http://localhost:8080
+{{- end }}
+
+Quick test:
+  curl http://localhost:8080/healthz
+  curl -X POST http://localhost:8080/orders -H "Content-Type: application/json" -d '{"orderId":"TEST-001"}'
+  curl http://localhost:8080/orders/count
+
+Check status:
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "demo-app.name" . }}
+  kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "demo-app.name" . }} -f
+- Image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+- MongoDB host: {{ .Values.mongodb.host }}
+- Database: {{ .Values.mongodb.database }}
+- Collection: {{ .Values.mongodb.collection }}
+
+{{- if .Values.autoscaling.enabled }}
+
+Horizontal Pod Autoscaler is enabled:
+- Min replicas: {{ .Values.autoscaling.minReplicas }}
+- Max replicas: {{ .Values.autoscaling.maxReplicas }}
+{{- end }}
+
+For more information, visit: https://github.com/your-repo/demo-app

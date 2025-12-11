@@ -1,0 +1,105 @@
+# Production environment
+replicaCount: 3
+
+image:
+  repository: your-registry/demo-app
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 30
+
+mongodb:
+  host: mongodb
+  port: 27017
+  database: app
+  collection: orders
+  auth:
+    existingSecret: mongodb
+
+configMap:
+  data:
+    MONGO_DB: app
+    MONGO_COLLECTION: orders
+    LOG_LEVEL: "info"
+    NODE_ENV: "production"
+
+env:
+  - name: REQUEST_TIMEOUT
+    value: "30000"
+  - name: MAX_CONNECTIONS
+    value: "100"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: demo-app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: demo-app-tls
+      hosts:
+        - demo-app.example.com
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - demo-app
+          topologyKey: kubernetes.io/hostname

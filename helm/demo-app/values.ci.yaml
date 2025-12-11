@@ -1,0 +1,74 @@
+# CI environment
+replicaCount: 1
+
+image:
+  repository: demo-app
+  pullPolicy: Always
+  tag: "latest"
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+autoscaling:
+  enabled: false
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: 3000
+  periodSeconds: 3
+  timeoutSeconds: 3
+  failureThreshold: 15
+
+mongodb:
+  host: mongodb
+  port: 27017
+  database: app
+  collection: orders
+  auth:
+    existingSecret: mongodb
+
+configMap:
+  data:
+    MONGO_DB: app
+    MONGO_COLLECTION: orders
+    LOG_LEVEL: "warn"
+    NODE_ENV: "test"
+
+env:
+  - name: CI
+    value: "true"
+  - name: TEST_MODE
+    value: "integration"
+
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
