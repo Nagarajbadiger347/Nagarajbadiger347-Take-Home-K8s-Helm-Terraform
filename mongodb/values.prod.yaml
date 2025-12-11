@@ -1,0 +1,144 @@
+# Production environment values for MongoDB
+# Replica set for high availability
+
+architecture: replicaset
+replicaCount: 3
+
+auth:
+  enabled: true
+  rootUser: root
+  rootPassword: ""  # must be set via --set flag or external secret
+  database: app
+  username: appuser
+  password: ""  # must be set via --set flag or external secret
+  replicaSetKey: ""  # required for replica set
+
+persistence:
+  enabled: true
+  storageClass: "gp3"
+  accessModes:
+    - ReadWriteOnce
+  size: 50Gi
+  annotations:
+    snapshot.storage.kubernetes.io/is-default-class: "true"
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 6
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 60
+
+service:
+  type: ClusterIP
+  port: 27017
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9216"
+
+podLabels:
+  app: mongodb
+  environment: prod
+  criticality: high
+
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+  fsGroupChangePolicy: "OnRootMismatch"
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+  readOnlyRootFilesystem: false
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+configuration: |-
+  net:
+    maxIncomingConnections: 500
+  storage:
+    journal:
+      enabled: true
+  operationProfiling:
+    mode: slowOp
+    slowOpThresholdMs: 100
+
+metrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  serviceMonitor:
+    enabled: true
+
+arbiter:
+  enabled: true
+
+volumePermissions:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+networkPolicy:
+  enabled: true
+  allowExternal: false
+  ingress:
+    - from:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: demo-app
+      ports:
+      - protocol: TCP
+        port: 27017
+
+pdb:
+  create: true
+  minAvailable: 2
+
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: mongodb
+            app.kubernetes.io/instance: mongodb
+        topologyKey: kubernetes.io/hostname
+

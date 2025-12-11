@@ -1,0 +1,82 @@
+# CI environment values for MongoDB
+# Fixed passwords for reproducible testing (TEST ONLY - not for production!)
+
+architecture: standalone
+
+auth:
+  enabled: true
+  rootUser: root
+  rootPassword: "testpassword123"
+  database: app
+  username: appuser
+  password: "apppassword123"
+
+persistence:
+  enabled: true
+  storageClass: "gp2"
+  accessModes:
+    - ReadWriteOnce
+  size: 5Gi
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 20
+
+service:
+  type: ClusterIP
+  port: 27017
+
+podLabels:
+  app: mongodb
+  environment: ci
+
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+
+configuration: ""
+
+metrics:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+arbiter:
+  enabled: false
+
+volumePermissions:
+  enabled: true

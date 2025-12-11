@@ -1,0 +1,106 @@
+# Development environment values for MongoDB
+# Standalone is fine for dev - no need for replica set complexity
+
+architecture: standalone
+
+auth:
+  enabled: true
+  rootUser: root
+  rootPassword: ""  # auto-generated
+  database: app
+  username: appuser
+  password: ""  # auto-generated
+
+persistence:
+  enabled: true
+  storageClass: "gp2"
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 10
+  failureThreshold: 6
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 30
+
+service:
+  type: ClusterIP
+  port: 27017
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9216"
+
+podLabels:
+  app: mongodb
+  environment: dev
+
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+
+configuration: |-
+  net:
+    maxIncomingConnections: 100
+
+metrics:
+  enabled: true
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  serviceMonitor:
+    enabled: false  # Set to true if using Prometheus Operator
+
+# Network policies (basic)
+networkPolicy:
+  enabled: false
+  # Enable for production with specific ingress rules
+  # ingress:
+  #   - from:
+  #     - podSelector:
+  #         matchLabels:
+  #           app: demo-app
+
+# Arbiter configuration (not needed for standalone)
+arbiter:
+  enabled: false
+
+# Volume permissions init container
+volumePermissions:
+  enabled: true
