@@ -9,6 +9,9 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: rootpass123
       MONGO_INITDB_DATABASE: app
+      # These environment variables will be used by the init script
+      MONGO_APP_USER: appuser
+      MONGO_APP_PASSWORD: apppass123
     ports:
       - "27017:27017"
     volumes:
